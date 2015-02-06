@@ -5,7 +5,8 @@ CHANGES
 0.3.10 (Unreleased)
 ===================
 
-- Switch info logging to debug 
+- Switch info logging to debug
+- Removed hixie protocol support as it's been removed in recent versions of gevent-websocket
 
 
 0.3.9 (2013-01-08)

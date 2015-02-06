@@ -1,15 +1,15 @@
 pyramid_sockjs
 ==============
 
-`pyramid_sockjs` is a `gevent <http://www.gevent.org/>`_-based `SockJS <http://sockjs.org>`_ integration for 
-`Pyramid <http://www.pylonsproject.org/>`_.  SockJS interface is implemented as a 
-`pyramid route <http://pyramid.readthedocs.org/en/latest/narr/urldispatch.html>`_. pyramid_sockjs runs inside 
+`pyramid_sockjs` is a `gevent <http://www.gevent.org/>`_-based `SockJS <http://sockjs.org>`_ integration for
+`Pyramid <http://www.pylonsproject.org/>`_.  SockJS interface is implemented as a
+`pyramid route <http://pyramid.readthedocs.org/en/latest/narr/urldispatch.html>`_. pyramid_sockjs runs inside
 a WSGI application rather than WSGI server.  This means all of your previous WSGI/Pyramid experience will be
-relevant. Its possible to create any number of different sockjs routes, ie 
-`/__sockjs__/*` or `/mycustom-sockjs/*`. You can provide different session implementation 
+relevant. Its possible to create any number of different sockjs routes, ie
+`/__sockjs__/*` or `/mycustom-sockjs/*`. You can provide different session implementation
 and management for each sockjs route.
 
-Gevent based server is required for ``pyramid_sockjs``. 
+Gevent based server is required for ``pyramid_sockjs``.
 For example ``gunicorn`` with gevent worker. ``pyramid_sockjs`` provides
 simple gevent based paster server runner::
 
@@ -80,12 +80,11 @@ To run chat example use following command::
 Supported transports
 --------------------
 
-* websocket (`hixie-76 <http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76>`_
-  and `hybi-10 <http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10>`_)
+* websocket (`hybi-10 <http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10>`_)
 * `xhr-streaming <https://secure.wikimedia.org/wikipedia/en/wiki/XMLHttpRequest#Cross-domain_requests>`_
 * `xhr-polling <https://secure.wikimedia.org/wikipedia/en/wiki/XMLHttpRequest#Cross-domain_requests>`_
 * `iframe-xhr-polling <https://developer.mozilla.org/en/DOM/window.postMessage>`_
-* iframe-eventsource (`EventSource <http://dev.w3.org/html5/eventsource/>`_ used from an 
+* iframe-eventsource (`EventSource <http://dev.w3.org/html5/eventsource/>`_ used from an
   `iframe via postMessage <https://developer.mozilla.org/en/DOM/window.postMessage>`_)
 * iframe-htmlfile (`HtmlFile <http://cometdaily.com/2007/11/18/ie-activexhtmlfile-transport-part-ii/>`_
   used from an `iframe via postMessage <https://developer.mozilla.org/en/DOM/window.postMessage>`_.)

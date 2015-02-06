@@ -202,30 +202,9 @@ class WebSocketResponse(Response):
         self.receive = receive
 
     def __call__(self, environ, start_response):
-        # WebsocketHixie76 handshake (test_haproxy)
-        if environ['wsgi.websocket_version'] == 'hixie-76':
-            part1, part2, socket = environ['wsgi.hixie-keys']
-
-            towrite = [
-                'HTTP/1.1 %s\r\n'%self.status,
-                'Date: %s\r\n'%format_date_time(time.time())]
-
-            for header in self._abs_headerlist(environ):
-                towrite.append("%s: %s\r\n" % header)
-
-            towrite.append("\r\n")
-            socket.sendall(''.join(towrite))
-
-            key3 = environ['wsgi.input'].read(8)
-            if not key3:
-                key3 = environ['wsgi.input'].rfile.read(8)
-
-            socket.sendall(
-                md5(struct.pack("!II", part1, part2) + key3).digest())
-        else:
-            write = start_response(
-                self.status, self._abs_headerlist(environ))
-            write(self.body)
+        write = start_response(
+            self.status, self._abs_headerlist(environ))
+        write(self.body)
 
         try:
             self.session.acquire(self.request)

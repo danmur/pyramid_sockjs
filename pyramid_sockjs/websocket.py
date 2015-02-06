@@ -4,41 +4,10 @@ import struct
 from hashlib import md5, sha1
 from socket import SHUT_RDWR
 from pyramid.httpexceptions import HTTPBadRequest, HTTPMethodNotAllowed
-from geventwebsocket.handler import reconstruct_url
-from geventwebsocket.websocket import WebSocketHybi, WebSocketHixie
+
 
 KEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 SUPPORTED_VERSIONS = ('13', '8', '7')
-
-
-class WebSocketHybi(WebSocketHybi):
-
-    def _close(self):
-        if self.socket is not None:
-            self.socket.shutdown(SHUT_RDWR)
-            self.socket = None
-            self._write = None
-
-            if not self._reading:
-                self.fobj.close()
-
-            self.fobj = None
-
-
-class WebSocketHixie(WebSocketHixie):
-
-    def __init__(self, socket, environ):
-        super(WebSocketHixie, self).__init__(socket, environ)
-
-        self.socket = socket
-
-    def close(self, message=''):
-        if self.socket is not None:
-            self.socket.shutdown(SHUT_RDWR)
-            self.socket = None
-            self._write = None
-            self.fobj.close()
-            self.fobj = None
 
 
 def init_websocket(request):
@@ -102,63 +71,3 @@ def get_key_value(key_value):
             key_number, spaces)
     else:
         return key_number / spaces
-
-
-def init_websocket_hixie(request):
-    environ = request.environ
-
-    socket = environ.get('gunicorn.socket', None)
-    if socket is None:
-        socket = environ.get('gevent.socket', None)
-        if socket is None:
-            return HTTPBadRequest("socket object is not available")
-        environ['gunicorn.socket'] = socket
-
-    websocket = WebSocketHixie(socket, environ)
-    environ['wsgi.websocket'] = websocket
-
-    key1 = environ.get('HTTP_SEC_WEBSOCKET_KEY1')
-    key2 = environ.get('HTTP_SEC_WEBSOCKET_KEY2')
-
-    if key1 is not None:
-        environ['wsgi.websocket_version'] = 'hixie-76'
-        if not key1:
-            return HTTPBadRequest('SEC-WEBSOCKET-KEY1 header is empty')
-        if not key2:
-            return HTTPBadRequest('SEC-WEBSOCKET-KEY2 header is empty')
-
-        try:
-            part1 = get_key_value(key1)
-            part2 = get_key_value(key2)
-            environ['wsgi.hixie-keys'] = (part1, part2, socket)
-        except Exception as err:
-            return HTTPBadRequest(str(err))
-
-        headers = [
-            ("Upgrade", "WebSocket"),
-            ("Connection", "Upgrade"),
-            ("Sec-WebSocket-Location", reconstruct_url(environ)),
-            ]
-        if websocket.protocol is not None:
-            headers.append(("Sec-WebSocket-Protocol", websocket.protocol))
-
-        if websocket.origin:
-            headers.append(("Sec-WebSocket-Origin", websocket.origin))
-
-        request.response.headers = headers
-        request.response.status = '101 Switching Protocols Handshake'
-    else:
-        environ['wsgi.websocket_version'] = 'hixie-75'
-        headers = [
-            ("Upgrade", "WebSocket"),
-            ("Connection", "Upgrade"),
-            ("WebSocket-Location", reconstruct_url(environ)),
-            ]
-
-        if websocket.protocol is not None:
-            headers.append(("WebSocket-Protocol", websocket.protocol))
-        if websocket.origin:
-            headers.append(("WebSocket-Origin", websocket.origin))
-
-        request.response.headers = headers
-        request.response.status = '101 Switching Protocols Handshake'

@@ -487,8 +487,6 @@ import websocket
 # protocol. A decent SockJS server should support at least the
 # following variants:
 #
-#   - hixie-75 (Chrome 4, Safari 5.0.0)
-#   - hixie-76/hybi-00 (Chrome 6, Safari 5.0.1)
 #   - hybi-07 (Firefox 6)
 #   - hybi-10 (Firefox 7, Chrome 14)
 #
@@ -513,125 +511,6 @@ class WebsocketHttpErrors(Test):
                   {}]:
             r = POST(base_url + '/0/0/websocket', headers=h)
             self.verify405(r)
-
-
-# Support WebSocket Hixie-76 protocol
-class WebsocketHixie76(Test):
-    def test_transport(self):
-        ws_url = 'ws:' + base_url.split(':',1)[1] + \
-                 '/000/' + str(uuid.uuid4()) + '/websocket'
-        ws = websocket.create_connection(ws_url)
-        self.assertEqual(ws.recv(), u'o')
-        ws.send(u'["a"]')
-        self.assertEqual(ws.recv(), u'a["a"]')
-        ws.close()
-
-    def test_close(self):
-        ws_url = 'ws:' + close_base_url.split(':',1)[1] + \
-                 '/000/' + str(uuid.uuid4()) + '/websocket'
-        ws = websocket.create_connection(ws_url)
-        self.assertEqual(ws.recv(), u'o')
-        self.assertEqual(ws.recv(), u'c[3000,"Go away!"]')
-
-        # The connection should be closed after the close frame.
-        with self.assertRaises(websocket.ConnectionClosedException):
-            if ws.recv() is None:
-                raise websocket.ConnectionClosedException
-        ws.close()
-
-    # Empty frames must be ignored by the server side.
-    def test_empty_frame(self):
-        ws_url = 'ws:' + base_url.split(':',1)[1] + \
-                 '/000/' + str(uuid.uuid4()) + '/websocket'
-        ws = websocket.create_connection(ws_url)
-        self.assertEqual(ws.recv(), u'o')
-        # Server must ignore empty messages.
-        ws.send(u'')
-        ws.send(u'["a"]')
-        self.assertEqual(ws.recv(), u'a["a"]')
-        ws.close()
-
-    # For WebSockets, as opposed to other transports, it is valid to
-    # reuse `session_id`. The lifetime of SockJS WebSocket session is
-    # defined by a lifetime of underlying WebSocket connection. It is
-    # correct to have two separate sessions sharing the same
-    # `session_id` at the same time.
-    def test_reuseSessionId(self):
-        on_close = lambda(ws): self.assertFalse(True)
-
-        ws_url = 'ws:' + base_url.split(':',1)[1] + \
-                 '/000/' + str(uuid.uuid4()) + '/websocket'
-        ws1 = websocket.create_connection(ws_url, on_close=on_close)
-        self.assertEqual(ws1.recv(), u'o')
-
-        ws2 = websocket.create_connection(ws_url, on_close=on_close)
-        self.assertEqual(ws2.recv(), u'o')
-
-        ws1.send(u'"a"')
-        self.assertEqual(ws1.recv(), u'a["a"]')
-
-        ws2.send(u'"b"')
-        self.assertEqual(ws2.recv(), u'a["b"]')
-
-        ws1.close()
-        ws2.close()
-
-        # It is correct to reuse the same `session_id` after closing a
-        # previous connection.
-        ws1 = websocket.create_connection(ws_url)
-        self.assertEqual(ws1.recv(), u'o')
-        ws1.send(u'"a"')
-        self.assertEqual(ws1.recv(), u'a["a"]')
-        ws1.close()
-
-    # Verify WebSocket headers sanity. Due to HAProxy design the
-    # websocket server must support writing response headers *before*
-    # receiving -76 nonce. In other words, the websocket code must
-    # work like that:
-    #
-    # * Receive request headers.
-    # * Write response headers.
-    # * Receive request nonce.
-    # * Write response nonce.
-    def test_haproxy(self):
-        url = base_url.split(':',1)[1] + \
-                 '/000/' + str(uuid.uuid4()) + '/websocket'
-        ws_url = 'ws:' + url
-        http_url = 'http:' + url
-        origin = '/'.join(http_url.split('/')[:3])
-
-        c = RawHttpConnection(http_url)
-        r = c.request('GET', http_url, http='1.1', headers={
-                'Connection':'Upgrade',
-                'Upgrade':'WebSocket',
-                'Origin': origin,
-                'Sec-WebSocket-Key1': '4 @1  46546xW%0l 1 5',
-                'Sec-WebSocket-Key2': '12998 5 Y3 1  .P00'
-                })
-        # First check response headers
-        self.assertEqual(r.status, 101)
-        self.assertEqual(r.headers['connection'].lower(), 'upgrade')
-        self.assertEqual(r.headers['upgrade'].lower(), 'websocket')
-        self.assertEqual(r.headers['sec-websocket-location'], ws_url)
-        self.assertEqual(r.headers['sec-websocket-origin'], origin)
-        self.assertFalse('Content-Length' in r.headers)
-        # Later send token
-        c.send('aaaaaaaa')
-        self.assertEqual(c.read()[:16],
-                         '\xca4\x00\xd8\xa5\x08G\x97,\xd5qZ\xba\xbfC{')
-
-    # When user sends broken data - broken JSON for example, the
-    # server must abruptly terminate the ws connection.
-    def test_broken_json(self):
-        ws_url = 'ws:' + base_url.split(':',1)[1] + \
-                 '/000/' + str(uuid.uuid4()) + '/websocket'
-        ws = websocket.create_connection(ws_url)
-        self.assertEqual(ws.recv(), u'o')
-        ws.send(u'["a')
-        with self.assertRaises(websocket.ConnectionClosedException):
-            if ws.recv() is None:
-                raise websocket.ConnectionClosedException
-        ws.close()
 
 
 # The server must support Hybi-10 protocol
